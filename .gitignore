@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv*
+venv/
+.envrc
+*.log
+
+# Local data / indexes
+storage/
+outbox/
+logs.jsonl
+emails.jsonl
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

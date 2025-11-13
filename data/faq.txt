@@ -1,0 +1,123 @@
+1. What payment methods do you accept?
+
+We accept all major credit and debit cards, PayPal, Apple Pay, Google Pay, and select “Buy Now, Pay Later” options such as Klarna and Afterpay.
+
+2. Is my payment information secure?
+
+Yes. All transactions are processed through encrypted payment gateways that comply with PCI DSS security standards. We never store your card details.
+
+3. Do I need to create an account to place an order?
+
+No, you can check out as a guest. However, creating an account allows you to track orders, manage returns, and receive special offers.
+
+4. How can I track my order?
+
+Once your order ships, you’ll receive a tracking link via email or SMS. You can also log in to your account to track the delivery status anytime.
+
+5. How long will it take to receive my order?
+
+Standard shipping usually takes 3–7 business days, depending on your location. Express delivery options are available at checkout for faster service.
+
+6. Do you offer international shipping?
+
+Yes, we ship to most countries worldwide. Shipping times and fees vary based on destination and local customs regulations.
+
+7. How much does shipping cost?
+
+Shipping is free for orders over $50. For smaller orders, shipping fees are calculated at checkout based on your address and selected shipping method.
+
+8. Can I change or cancel my order after placing it?
+
+Orders can be changed or canceled within one hour of placement. After that, the order is likely already in processing and can’t be modified.
+
+9. What should I do if I entered the wrong address?
+
+Contact our customer support as soon as possible at support@company.com
+. If the order hasn’t shipped yet, we can update the address.
+
+10. What if my order hasn’t arrived yet?
+
+Check your tracking information first. If it shows “delivered” but you haven’t received it, contact our support team for assistance.
+
+11. What is your return policy?
+
+We accept returns within 30 days of delivery for most items, provided they are unused and in original packaging. Some exclusions apply (e.g., final sale items).
+
+12. How do I start a return?
+
+Go to your order history, click “Request Return,” select the item, and print the prepaid return label. Drop the package at your nearest shipping point.
+
+13. When will I receive my refund?
+
+Once we receive and inspect your returned item, your refund will be processed within 3–5 business days. Refunds appear in your account within 7–10 days.
+
+14. Can I exchange an item instead of returning it?
+
+Yes. If the replacement is in stock, we’ll process an exchange once the original item is returned. Exchanges are subject to availability.
+
+15. What should I do if I received a damaged or defective product?
+
+Please contact support@company.com
+ within 48 hours of delivery with photos of the issue. We’ll send a replacement or issue a full refund.
+
+16. Do you offer gift wrapping or personalized messages?
+
+Yes, gift wrapping and message cards are available at checkout for a small additional fee.
+
+17. Can I use multiple promo codes on one order?
+
+Only one promo code can be applied per order. However, promo codes can be combined with automatic discounts such as free shipping offers.
+
+18. How can I use a gift card?
+
+Enter the gift card code at checkout. The balance will automatically apply to your total. If your order exceeds the balance, you can pay the difference.
+
+19. How do I know what size to order?
+
+Each product page includes a detailed size chart. You can also use our “Find My Fit” tool for personalized recommendations.
+
+20. Are your products authentic?
+
+Yes. All products sold on our website are 100% authentic and sourced directly from verified suppliers or official brand partners.
+
+21. Do you restock sold-out items?
+
+Popular items are often restocked. You can click “Notify Me” on a product page to receive an email when the item becomes available again.
+
+22. How do I contact customer support?
+
+You can reach us by email at support@company.com
+ or through live chat on our website, available Monday–Friday, 9 AM–6 PM (local time).
+
+23. Do you offer wholesale or bulk discounts?
+
+Yes. For orders over 50 units, contact sales@company.com
+ for wholesale pricing and partnership opportunities.
+
+24. What should I do if I forgot my password?
+
+Go to the login page and click “Forgot Password.” You’ll receive an email with a secure link to reset your password.
+
+25. Can I subscribe to your newsletter?
+
+Absolutely. Sign up via the footer on our website to receive updates on new arrivals, exclusive discounts, and seasonal sales.
+
+26. Are there any hidden fees at checkout?
+
+No. The total price displayed at checkout includes all applicable taxes and fees. International orders may incur customs duties based on your country.
+
+27. How can I apply for a return if I bought as a guest?
+
+Visit the “Track My Order” page, enter your email and order number, then click “Return an Item.”
+
+28. Do you offer loyalty rewards?
+
+Yes, our rewards program lets you earn points for purchases, reviews, and referrals. Points can be redeemed for discounts on future orders.
+
+29. Can I preorder upcoming items?
+
+Yes. Preorder products are clearly marked and shipped on the release date shown on the product page.
+
+30. How do I delete my account or personal data?
+
+Contact privacy@company.com to request account deletion or data export under GDPR/CCPA compliance.

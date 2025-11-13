@@ -1,0 +1,16 @@
+# LangChain (aligned pins)
+langchain==0.3.25
+langchain-community==0.3.25
+langchain-openai>=0.3.0,<0.4.0
+
+# Vector store: FAISS (no Rust/ONNX needed)
+faiss-cpu==1.8.0
+
+# Runtime deps
+numpy>=1.26.2,<2.0.0
+pydantic>=2.8,<3.0
+
+# Frameworks
+fastapi==0.115.5
+uvicorn==0.32.0
+streamlit==1.39.0
