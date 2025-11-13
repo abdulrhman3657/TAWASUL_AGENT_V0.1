@@ -6,16 +6,16 @@ like API calls, text logging, and email escalation.
 
 ---
 
-## 🚀 Features
-- 🤖 **OpenAI Agent** with structured tools
-- 💾 **FAISS** vector search (RAG)
-- 🧠 **Conversation memory**
-- 🪄 **Streamlit UI** with persistent context
-- 📬 **Email + logging tools** for escalation and tracking
+##  Features
+-  **OpenAI Agent** with structured tools
+-  **FAISS** vector search (RAG)
+-  **Conversation memory**
+-  **Streamlit UI** with persistent context
+-  **Email + logging tools** for escalation and tracking
 
 ---
 
-## 🧰 Quick Start
+##  Quick Start
 
 ```bash
 # clone the repo
