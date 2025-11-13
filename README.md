@@ -15,12 +15,15 @@ like API calls, text logging, and email escalation.
 
 ---
 
+##  Python Version
+
+This project **requires Python 3.11**.
+
+Other Python versions (such as 3.10 or 3.12) may cause dependency issues with FAISS, LangChain, and certain Windows-specific libraries.  
+
 ##  Quick Start
 
 ```bash
-# clone the repo
-git clone https://github.com/<your-username>/agentx.git
-cd agentx
 
 # create env
 python -m venv .venv
