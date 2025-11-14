@@ -1,6 +1,8 @@
+# This is a chat UI using Streamlit, with a bit of path-shim magic to make imports robust.
 import os
 import streamlit as st
 
+# It ensures project1/ and project1/app/ are on sys.path even if you run streamlit from different CWDs:
 # --- robust import path shim (works no matter your cwd) ---
 import sys
 from pathlib import Path
@@ -17,6 +19,7 @@ for p in (str(ROOT), str(APP_DIR)):
 # defensive sanity checks (will raise a clear error if something is off)
 assert (APP_DIR / "__init__.py").exists(), f"Missing __init__.py at {APP_DIR}"
 assert (APP_DIR / "agent.py").exists(), f"Missing agent.py at {APP_DIR}"
+# So from app.agent import build_agent works reliably.
 # --- end shim ---
 
 from app.agent import build_agent
@@ -32,6 +35,9 @@ from app.tools import LOGS_PATH, OUTBOX_PATH  # just to surface paths
 
 st.set_page_config(page_title="Agentic AI — Round 1", page_icon="🤖")
 
+# Lets you specify which model to use.
+# Button to rebuild the FAISS index from data/.
+# Shows where logs and “emails” are stored.
 # Sidebar controls
 with st.sidebar:
     st.header("Settings")
@@ -47,12 +53,14 @@ with st.sidebar:
     st.code(f"Logs: {LOGS_PATH}", language="bash")
     st.code(f"Outbox: {OUTBOX_PATH}", language="bash")
 
+# Agent is constructed once per browser session.
+# Chat history is stored as a list of (role, message).
 # Build agent once and keep in session
 if "agent" not in st.session_state:
     st.session_state.agent = build_agent(model=model)
     st.session_state.history = []
 
-st.title("🤖 Agentic AI (LangChain + Chroma + Streamlit)")
+st.title("Agentic AI (LangChain + Chroma + Streamlit)")
 
 # Chat history render
 for role, msg in st.session_state.history:
