@@ -39,3 +39,14 @@ python -m app.rag
 
 # run Streamlit UI
 python -m streamlit run app/streamlit_app.py
+
+```
+
+## ⚠️ Note on Python Wheel Issues
+Some dependencies — especially vector DB backends like FAISS or Chroma — may fail to install on certain systems due to missing pre-built Python wheels or platform-specific limitations.
+
+If you see errors about wheel builds or DLL load failures, try:
+
+```bash
+pip install -U pip setuptools wheel
+
