@@ -1,19 +1,24 @@
-# AgentX – LangChain + FAISS + Streamlit Agent
+# Agentic AI Support System
 
-An interactive, memory-aware AI agent built with **LangChain**, **FAISS**, and **Streamlit**.
-Supports retrieval-augmented generation (RAG) over local files and structured tools
-like API calls, text logging, and email escalation.
+A fully agentic customer support assistant powered by LangChain, OpenAI models, FAISS RAG, JSONL-based ticketing, analytics logging, and Streamlit/FastAPI interfaces.
 
 ---
 
 ##  Features
--  **OpenAI Agent** with structured tools
--  **FAISS** vector search (RAG)
--  **Conversation memory**
--  **Streamlit UI** with persistent context
--  **Email + logging tools** for escalation and tracking
+
+###  Autonomous AI Support Agent
+The agent can:
+- Create, update, and close support tickets  
+- Retrieve knowledge via RAG  
+- Escalate critical issues to human support  
+- Save conversation notes  
+- Track analytics  
+- Fetch user profiles (open tickets, ticket history)  
 
 ---
+
+##  RAG Knowledge Base
+All `.txt` files in the `data/` directory are embedded into a FAISS vectorstore.
 
 ##  Python Version
 
