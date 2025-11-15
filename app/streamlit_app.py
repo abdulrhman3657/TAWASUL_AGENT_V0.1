@@ -62,7 +62,7 @@ if "agent" not in st.session_state:
     st.session_state.agent = build_agent(model=model)
     st.session_state.history = []
 
-st.title("Agentic AI (LangChain + Chroma + Streamlit)")
+st.title("Tawasul AI")
 
 # Chat history render
 for role, msg in st.session_state.history:
