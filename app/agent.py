@@ -19,6 +19,7 @@ from .tools import (
     get_user_profile_tool,
     record_analytics_tool,
     close_last_open_ticket_tool,
+    SUPPORT_EMAIL,
 )
 from .rag import similarity_search
 
@@ -26,7 +27,7 @@ load_dotenv()
 
 
 SYSTEM_PROMPT = (
-    "You are AgentX, a customer support coordinator for our products and services.\n"
+    "You are AgentX, an autonomous customer support coordinator.\n"
     "\n"
     "LANGUAGE:\n"
     "- You understand Arabic and English.\n"
@@ -61,12 +62,15 @@ SYSTEM_PROMPT = (
     "- Use 'call_api' only for relevant customer-service operations (e.g., order status lookups).\n"
     "- Never call tools for clearly off-topic questions; in that case, just reply with the off-topic sentence above.\n"
     "\n"
-    "STRICT BEHAVIOR RULES (ONLY FOR IN-DOMAIN REQUESTS):\n"
-    "1) For every new issue, you SHOULD use 'manage_ticket' with status='open'.\n"
-    "2) If you escalate to a human using 'send_email', you SHOULD update the ticket using "
-    "   'manage_ticket' or 'close_last_ticket' with an appropriate status (for example 'escalated' or 'resolved').\n"
-    "3) When the user clearly indicates their problem is solved or asks you to close the ticket, you SHOULD call "
-    "   the ticket closing logic (such as 'close_last_ticket') so the ticket becomes resolved in the logs.\n"
+    "STRICT BEHAVIOR RULES:\n"
+    "1) For every new serious issue, you MUST create a ticket using 'manage_ticket'.\n"
+    "2) If the issue is critical, about money (billing/charges/refunds), or you are unsure "
+    "   about the correct action, you MUST escalate using 'escalate_to_support'.\n"
+    "3) When you escalate, your next action must be to call 'escalate_to_support' with a clear "
+    "   subject and body that includes the ticket id and a short summary.\n"
+    "4) After escalation, clearly tell the user that their issue was escalated to human support.\n"
+    "5) Whenever the user says 'close the ticket' or clearly indicates the issue is solved, you MUST "
+    "   call the 'close_last_ticket' tool to mark the most recent open ticket as resolved.\n"
     "\n"
     "GENERAL STYLE (ONLY WHEN YOU ARE ALLOWED TO ANSWER):\n"
     "- Be concise and focused on solving the user's issue.\n"
@@ -95,10 +99,13 @@ class CallApiInput(BaseModel):
     )
 
 
-class SendEmailInput(BaseModel):
-    to: str = Field(..., description="Email recipient (e.g., support@company.com).")
-    subject: str = Field(..., description="Email subject line.")
-    body: str = Field(..., description="Email body text, include ticket id and context.")
+class EscalateToSupportInput(BaseModel):
+    subject: str = Field(..., description="Short subject line for the support team.")
+    body: str = Field(
+        ...,
+        description="Email body text, include ticket id, user_id, and brief context."
+    )
+
 
 
 class SearchDocsInput(BaseModel):
@@ -270,16 +277,21 @@ def build_agent(model: str = "gpt-4o-mini"):
             ),
         ),
         StructuredTool.from_function(
-            name="send_email",
-            func=lambda to, subject, body: send_email_tool(
-                to=to, subject=subject, body=body
+            name="escalate_to_support",
+            func=lambda subject, body: send_email_tool(
+                subject=subject,
+                body=body,
+                to=SUPPORT_EMAIL,
+                meta={"channel": "agentx"},
             ),
-            args_schema=SendEmailInput,
+            args_schema=EscalateToSupportInput,
             description=(
-                "Escalate complex or urgent cases to a human by queuing an email. "
-                "Include ticket_id and summary in the body."
+                "Escalate complex or urgent cases to human support by sending an email "
+                f"to {SUPPORT_EMAIL}. Always include ticket_id and a short summary "
+                "in the body."
             ),
         ),
+
     ]
 
     memory = ConversationBufferMemory(

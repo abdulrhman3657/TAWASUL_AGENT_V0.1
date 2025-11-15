@@ -95,17 +95,17 @@ def call_api_tool(
 
 
 def send_email_tool(
-    to: str,
     subject: str,
     body: str,
+    to: str = SUPPORT_EMAIL,
     meta: Dict[str, Any] | None = None,
 ) -> str:
     """
     Escalate by sending an 'email' (append to outbox/emails.jsonl).
 
-    Used for:
-    - urgent / unclear cases
-    - escalation to human support
+    NOTE:
+    - All support escalations use the fixed SUPPORT_EMAIL by default.
+    - The 'to' parameter is optional; if omitted, SUPPORT_EMAIL is used.
     """
     _ensure_dirs()
     record = {
@@ -115,8 +115,10 @@ def send_email_tool(
         "body": body,
         "meta": meta or {},
     }
-    _append_jsonl(OUTBOX_PATH, record)
+    with open(OUTBOX_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
     return f"Queued email to {to} with subject='{subject}'."
+
 
 
 # --------------------------------------------------------------------
