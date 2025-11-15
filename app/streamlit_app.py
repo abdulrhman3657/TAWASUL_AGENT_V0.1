@@ -1,8 +1,10 @@
 # This is a chat UI using Streamlit, with a bit of path-shim magic to make imports robust.
 import os
+import json
+import time
+import uuid
 import streamlit as st
 
-# It ensures project1/ and project1/app/ are on sys.path even if you run streamlit from different CWDs:
 # --- robust import path shim (works no matter your cwd) ---
 import sys
 from pathlib import Path
@@ -19,25 +21,41 @@ for p in (str(ROOT), str(APP_DIR)):
 # defensive sanity checks (will raise a clear error if something is off)
 assert (APP_DIR / "__init__.py").exists(), f"Missing __init__.py at {APP_DIR}"
 assert (APP_DIR / "agent.py").exists(), f"Missing agent.py at {APP_DIR}"
-# So from app.agent import build_agent works reliably.
 # --- end shim ---
 
 from app.agent import build_agent
 from app.rag import build_vectorstore
-from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH, ANALYTICS_PATH  # ← add these
-import streamlit as st
-import os
+from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH, ANALYTICS_PATH
 
+# -----------------------------
+#  Conversation logging (Python-controlled)
+#  One JSON file per session_id, updated on each turn
+# -----------------------------
+CONVERSATIONS_DIR = os.path.join(ROOT, "storage", "conversations")
 
-from app.agent import build_agent
-from app.rag import build_vectorstore
-from app.tools import LOGS_PATH, OUTBOX_PATH  # just to surface paths
+def save_conversation_json(session_id: str, history):
+    """
+    Save the entire conversation for a session into a single JSON file.
+    The same file is overwritten on each call (no extra JSON objects).
+    """
+    os.makedirs(CONVERSATIONS_DIR, exist_ok=True)
+    path = os.path.join(CONVERSATIONS_DIR, f"{session_id}.json")
+    record = {
+        "ts": time.time(),
+        "session_id": session_id,
+        "messages": [
+            {"role": role, "content": msg}
+            for role, msg in history
+        ],
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(record, f, ensure_ascii=False, indent=2)
 
+# -----------------------------
+# Streamlit UI
+# -----------------------------
 st.set_page_config(page_title="Agentic AI — Round 1", page_icon="🤖")
 
-# Lets you specify which model to use.
-# Button to rebuild the FAISS index from data/.
-# Shows where logs and “emails” are stored.
 # Sidebar controls
 with st.sidebar:
     st.header("Settings")
@@ -52,12 +70,16 @@ with st.sidebar:
     st.markdown("**Paths**")
     st.code(f"Logs: {LOGS_PATH}", language="bash")
     st.code(f"Outbox: {OUTBOX_PATH}", language="bash")
-    st.code(f"Tickets: {TICKETS_PATH}", language="bash")        # ← new
-    st.code(f"Analytics: {ANALYTICS_PATH}", language="bash")    # ← new
+    st.code(f"Tickets: {TICKETS_PATH}", language="bash")
+    st.code(f"Analytics: {ANALYTICS_PATH}", language="bash")
+    st.code(f"Conversations dir: {CONVERSATIONS_DIR}", language="bash")
 
-# Agent is constructed once per browser session.
-# Chat history is stored as a list of (role, message).
-# Build agent once and keep in session
+# -----------------------------------
+# Session state init (agent + history)
+# -----------------------------------
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
 if "agent" not in st.session_state:
     st.session_state.agent = build_agent(model=model)
     st.session_state.history = []
@@ -69,13 +91,17 @@ for role, msg in st.session_state.history:
     with st.chat_message(role):
         st.markdown(msg)
 
-# Chat input
+# -----------------------------
+# Chat input & main interaction
+# -----------------------------
 user_input = st.chat_input("Type your message…")
 if user_input:
+    # 1) Add user message
     st.session_state.history.append(("user", user_input))
     with st.chat_message("user"):
         st.markdown(user_input)
 
+    # 2) Agent reply
     with st.chat_message("assistant"):
         with st.spinner("Thinking…"):
             try:
@@ -83,5 +109,15 @@ if user_input:
                 reply = result.get("output", str(result))
             except Exception as e:
                 reply = f"Error: {e}"
+
             st.markdown(reply)
             st.session_state.history.append(("assistant", reply))
+
+    # 3) 💾 Save/overwrite this session's conversation JSON
+    try:
+        save_conversation_json(
+            st.session_state.session_id,
+            st.session_state.history,
+        )
+    except Exception as e:
+        st.warning(f"Failed to save conversation: {e}")
