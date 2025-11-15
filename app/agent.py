@@ -1,132 +1,292 @@
 # app/agent.py
-from langchain_openai import ChatOpenAI # OpenAI chat model wrapper.
-from langchain.agents import initialize_agent, AgentType # builds an agent that uses OpenAI-style function calling.
-from langchain_core.messages import SystemMessage # lets you inject a “system prompt” (instructions) into the conversation.
-from langchain.memory import ConversationBufferMemory # keeps a history of messages.
-from langchain_core.prompts import MessagesPlaceholder # placeholder so memory can be injected into the system prompt.
+from typing import Optional
 
 from dotenv import load_dotenv
-load_dotenv(override=True)
-
-# a tool wrapper that uses Pydantic schemas for arguments.
-# This lets the LLM pass structured JSON arguments (like {"query": "...", "k": 5}) instead of just a single string.
-# lets the agent call tools with typed JSON arguments (via Pydantic models).
-# Pydantic models define the input schema for each tool.
-from langchain.tools import StructuredTool
-
 from pydantic import BaseModel, Field
 
-from .tools import save_text_tool, call_api_tool, send_email_tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import initialize_agent, AgentType
+from langchain_core.messages import SystemMessage
+from langchain.memory import ConversationBufferMemory
+from langchain_core.prompts import MessagesPlaceholder
+from langchain.tools import StructuredTool
+
+from .tools import (
+    save_text_tool,
+    call_api_tool,
+    send_email_tool,
+    upsert_ticket_tool,
+    get_user_profile_tool,
+    record_analytics_tool,
+    close_last_open_ticket_tool,
+)
 from .rag import similarity_search
 
-# This prompt instructs the model on when to use which tool and how to answer.
+load_dotenv()
+
+
 SYSTEM_PROMPT = (
-    "You are an autonomous agent. Choose tools wisely. "
-    "Use 'search_docs' for knowledge from the vector database. "
-    "Use 'call_api' when the user asks about order data. "
-    "Use 'save_text' to store useful notes or FAQ candidates. "
-
-    "Escalation rules: "
-    "Always call the 'send_email' tool and send the email to support@tawasul31.com "
-    "when any of the following conditions are true: "
-    "1) The user explicitly requests escalation, OR "
-    "2) You cannot solve the user's issue, OR "
-    "3) The issue is too complex, unclear, or beyond your capabilities. "
-
-    "When escalating, summarize the issue clearly in the email body. "
-    "After you call the escalation tool, briefly explain to the user that the issue "
-    "has been escalated. "
-
-    "Keep answers concise and always explain what you did."
+    "You are AgentX, a customer support coordinator for our products and services.\n"
+    "\n"
+    "LANGUAGE:\n"
+    "- You understand Arabic and English.\n"
+    "- Always reply in the same language the user is using.\n"
+    "\n"
+    "ALLOWED TOPICS (IN-DOMAIN):\n"
+    "- Orders, shipping, delivery, and tracking.\n"
+    "- Refunds, returns, cancellations, and exchanges.\n"
+    "- Billing, payments, subscriptions, and invoices.\n"
+    "- Product usage, technical issues, troubleshooting, and account access.\n"
+    "- Questions directly related to the official policies and FAQs in the knowledge base.\n"
+    "\n"
+    "OFF-TOPIC HANDLING (OUT-OF-DOMAIN):\n"
+    "- If the user asks about anything outside the topics above (for example: office pet policy, HR questions, "
+    "company internal rules not in the knowledge base, general knowledge, personal questions, politics, etc.), "
+    "you MUST answer with exactly this sentence and NOTHING else:\n"
+    "  \"I'm a customer service agent and can only help with questions related to our products and services.\"\n"
+    "- Do NOT try to be helpful outside your domain. Do NOT explain, guess, or add extra text.\n"
+    "\n"
+    "UNKNOWN / INSUFFICIENT INFORMATION (IN-DOMAIN BUT UNSURE):\n"
+    "- If the question IS about an allowed topic, but the tools and documents do not give you enough reliable "
+    "information to answer confidently, you MUST respond with exactly this sentence and NOTHING else:\n"
+    "  \"I don't have enough information to answer that.\"\n"
+    "- You must NOT invent policies, numbers, or details. Never guess.\n"
+    "\n"
+    "TOOLS USAGE (ONLY FOR ALLOWED TOPICS):\n"
+    "- Use 'search_docs' to answer questions from the knowledge base (RAG over FAISS).\n"
+    "- Use 'manage_ticket' to create or update support tickets with topic, urgency, department, and status.\n"
+    "- Use 'get_user_profile' to see if the user is new, returning, or has open tickets.\n"
+    "- Use 'send_email' to escalate urgent or unclear in-domain cases to a human.\n"
+    "- Use 'record_analytics' and 'save_text' to log outcomes and potential FAQ candidates.\n"
+    "- Use 'call_api' only for relevant customer-service operations (e.g., order status lookups).\n"
+    "- Never call tools for clearly off-topic questions; in that case, just reply with the off-topic sentence above.\n"
+    "\n"
+    "STRICT BEHAVIOR RULES (ONLY FOR IN-DOMAIN REQUESTS):\n"
+    "1) For every new issue, you SHOULD use 'manage_ticket' with status='open'.\n"
+    "2) If you escalate to a human using 'send_email', you SHOULD update the ticket using "
+    "   'manage_ticket' or 'close_last_ticket' with an appropriate status (for example 'escalated' or 'resolved').\n"
+    "3) When the user clearly indicates their problem is solved or asks you to close the ticket, you SHOULD call "
+    "   the ticket closing logic (such as 'close_last_ticket') so the ticket becomes resolved in the logs.\n"
+    "\n"
+    "GENERAL STYLE (ONLY WHEN YOU ARE ALLOWED TO ANSWER):\n"
+    "- Be concise and focused on solving the user's issue.\n"
+    "- Briefly explain what you did (classification, ticket id, actions taken) when answering in-domain questions.\n"
+    "- Maintain a polite, professional customer-support tone.\n"
 )
+
+
 
 # ---------- Pydantic arg schemas ----------
 
-# Each tool gets a structured input specification:
 
-# text: str          # required text to save
-# tag: str = "note"  # optional classification tag
 class SaveTextInput(BaseModel):
-    text: str = Field(..., description="The content to save")
-    tag: str = Field("note", description="Optional tag for classification")
+    text: str = Field(..., description="The content or insight to save.")
+    tag: str = Field(
+        "note",
+        description="Optional tag for classification (e.g., 'faq_candidate', 'bug', 'trend').",
+    )
 
-# endpoint: str      # e.g. "/orders/12345"
-# method: str = "GET"
+
 class CallApiInput(BaseModel):
     endpoint: str = Field(..., description="e.g., /orders/12345")
-    method: str = Field("GET", description="HTTP method, default GET")
+    method: str = Field(
+        "GET",
+        description="HTTP method, default GET.",
+    )
 
-# to: str
-# subject: str
-# body: str
+
 class SendEmailInput(BaseModel):
-    to: str = Field(..., description="Email recipient")
-    subject: str = Field(..., description="Email subject")
-    body: str = Field(..., description="Email body text")
+    to: str = Field(..., description="Email recipient (e.g., support@company.com).")
+    subject: str = Field(..., description="Email subject line.")
+    body: str = Field(..., description="Email body text, include ticket id and context.")
 
-# query: str
-# k: int = 4  # top-k docs
+
 class SearchDocsInput(BaseModel):
-    query: str = Field(..., description="Semantic search query")
-    k: int = Field(4, ge=1, le=20, description="Top-k passages to retrieve")
+    query: str = Field(..., description="Semantic search query in Arabic or English.")
+    k: int = Field(
+        4,
+        ge=1,
+        le=20,
+        description="Top-k passages to retrieve from the knowledge base.",
+    )
 
-# These schemas ensure the LLM passes valid structured arguments to tools instead of free-form strings.
+
+class TicketUpsertInput(BaseModel):
+    user_id: str = Field(
+        ...,
+        description="Stable identifier for the user (email, phone, or customer id).",
+    )
+    message: str = Field(
+        ...,
+        description="The latest user message or summary of the issue.",
+    )
+    topic: str = Field(
+        ...,
+        description="Short topic label (e.g., 'refund', 'delivery_delay', 'technical_issue').",
+    )
+    urgency: str = Field(
+        ...,
+        description="One of: low, medium, high, critical.",
+    )
+    department: str = Field(
+        ...,
+        description="Target department (e.g., 'billing', 'support', 'technical', 'sales', 'general').",
+    )
+    status: str = Field(
+        "open",
+        description="Ticket status (e.g., open, pending, resolved, escalated).",
+    )
+    ticket_id: Optional[str] = Field(
+        None,
+        description="Existing ticket id to update, or leave empty to create a new one.",
+    )
+
+
+class UserProfileInput(BaseModel):
+    user_id: str = Field(
+        ...,
+        description="Stable identifier for the user (same as passed to ticket tools).",
+    )
+
+
+class AnalyticsInput(BaseModel):
+    ticket_id: str = Field(..., description="Ticket id for which to log analytics.")
+    status: str = Field(
+        ...,
+        description="Final status of this interaction (e.g., 'resolved', 'escalated').",
+    )
+    escalated: bool = Field(
+        ...,
+        description="True if a human or email escalation was involved.",
+    )
+    response_time_sec: Optional[float] = Field(
+        None,
+        description="Optional response time in seconds, if available.",
+    )
+    rating: Optional[float] = Field(
+        None,
+        description="Optional satisfaction rating (1-5, etc.) provided by the user.",
+    )
+
+
+class CloseLastTicketInput(BaseModel):
+    # Dummy field so the tool schema is non-empty; value is ignored.
+    dummy: str = Field(
+        "ok",
+        description="Always 'ok'. No real arguments are needed; this just closes the last open ticket.",
+    )
+
 
 # ---------- Build agent ----------
 
-# This function creates the agent
+
 def build_agent(model: str = "gpt-4o-mini"):
-    #  Uses the model name passed in (e.g. gpt-4o or gpt-4o-mini).
-    # Low temperature → deterministic, concise answers.
+    # Multilingual OpenAI chat model (Arabic + English)
     llm = ChatOpenAI(model=model, temperature=0.2)
 
-    # Each tool is wrapped as a StructuredTool
-    # tool choice is influenced by:
-    # System prompt (high-level policy).
-    # Tool names (e.g., search_docs, send_email).
-    # Tool descriptions (what the tool is for).
-    # Args schema (what inputs are expected).
     tools = [
+        StructuredTool.from_function(
+            name="search_docs",
+            func=lambda query, k=4: "\n\n".join(
+                similarity_search(query=query, k=int(k))
+            ),
+            args_schema=SearchDocsInput,
+            description=(
+                "Retrieve relevant passages from the knowledge base (FAISS RAG). "
+                "Use this to answer policy, FAQ, and how-to questions."
+            ),
+        ),
+        StructuredTool.from_function(
+            name="manage_ticket",
+            func=lambda user_id, message, topic, urgency, department, status="open", ticket_id=None: upsert_ticket_tool(
+                user_id=user_id,
+                message=message,
+                topic=topic,
+                urgency=urgency,
+                department=department,
+                status=status,
+                ticket_id=ticket_id,
+            ),
+            args_schema=TicketUpsertInput,
+            description=(
+                "Create or update a support ticket. "
+                "Always include topic, urgency, and department. "
+                "If updating, pass the existing ticket_id."
+            ),
+        ),
+        StructuredTool.from_function(
+            name="get_user_profile",
+            func=lambda user_id: get_user_profile_tool(user_id=user_id),
+            args_schema=UserProfileInput,
+            description=(
+                "Look up whether a user is new, returning, and whether they have open tickets, "
+                "based on their user_id."
+            ),
+        ),
+        StructuredTool.from_function(
+            name="record_analytics",
+            func=lambda ticket_id, status, escalated, response_time_sec=None, rating=None: record_analytics_tool(
+                ticket_id=ticket_id,
+                status=status,
+                escalated=bool(escalated),
+                response_time_sec=response_time_sec,
+                rating=rating,
+            ),
+            args_schema=AnalyticsInput,
+            description=(
+                "Record analytics for a ticket: final status, whether it was escalated, "
+                "optional response time, and optional rating."
+            ),
+        ),
+        StructuredTool.from_function(
+            name="close_last_ticket",
+            func=lambda dummy="ok": close_last_open_ticket_tool(),
+            args_schema=CloseLastTicketInput,
+            description=(
+                "Close the most recent open ticket by marking it as resolved. "
+                "Use this whenever the user says things like 'close the ticket', "
+                "'mark this as resolved', or clearly indicates the issue is solved. "
+                "No ticket id is required."
+            ),
+        ),
         StructuredTool.from_function(
             name="save_text",
             func=lambda text, tag="note": save_text_tool(text=text, tag=tag),
             args_schema=SaveTextInput,
-            description="Store snippets or FAQ candidates."
+            description=(
+                "Store snippets, FAQ candidates, or repeated issues. "
+                "Use tag='faq_candidate' for potential new FAQ entries."
+            ),
         ),
-        # A mock external API, currently supports GET /orders/{id}.
         StructuredTool.from_function(
             name="call_api",
-            func=lambda endpoint, method="GET": call_api_tool(endpoint=endpoint, method=method),
+            func=lambda endpoint, method="GET": call_api_tool(
+                endpoint=endpoint, method=method
+            ),
             args_schema=CallApiInput,
-            description="Mock external API. Supports GET /orders/{id}."
+            description=(
+                "Mock external API. Use for things like order status lookups "
+                "(supports GET /orders/{id})."
+            ),
         ),
-        # Queues emails in a JSONL outbox.
         StructuredTool.from_function(
             name="send_email",
-            func=lambda to, subject, body: send_email_tool(to=to, subject=subject, body=body),
+            func=lambda to, subject, body: send_email_tool(
+                to=to, subject=subject, body=body
+            ),
             args_schema=SendEmailInput,
-            description="Escalate complex or low-confidence cases."
-        ),
-        # Uses the RAG vector store to retrieve relevant passages and concatenate them.
-        StructuredTool.from_function(
-            name="search_docs",
-            func=lambda query, k=4: "\n\n".join(similarity_search(query=query, k=int(k))),
-            args_schema=SearchDocsInput,
-            description="Retrieve relevant passages from the Chroma knowledge base (RAG)."
+            description=(
+                "Escalate complex or urgent cases to a human by queuing an email. "
+                "Include ticket_id and summary in the body."
+            ),
         ),
     ]
 
-    # Stores previous messages under chat_history, which will be injected into the prompts.
     memory = ConversationBufferMemory(
         memory_key="chat_history",
-        return_messages=True
+        return_messages=True,
     )
 
-    # Uses OpenAI function calling style.
-    # system_message sets the behavior (tool choice, escalation, etc.).
-    # extra_prompt_messages = the chat history placeholder.
-    # verbose=True logs the tool calls and thought process at the console.
-    # Returns an AgentExecutor you can .run() or .invoke().
     agent = initialize_agent(
         tools=tools,
         llm=llm,
@@ -136,7 +296,9 @@ def build_agent(model: str = "gpt-4o-mini"):
         system_message=SystemMessage(content=SYSTEM_PROMPT),
         memory=memory,
         agent_kwargs={
-            "extra_prompt_messages": [MessagesPlaceholder(variable_name="chat_history")]
+            "extra_prompt_messages": [
+                MessagesPlaceholder(variable_name="chat_history")
+            ],
         },
     )
     return agent

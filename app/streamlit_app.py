@@ -24,7 +24,7 @@ assert (APP_DIR / "agent.py").exists(), f"Missing agent.py at {APP_DIR}"
 
 from app.agent import build_agent
 from app.rag import build_vectorstore
-from app.tools import LOGS_PATH, OUTBOX_PATH
+from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH, ANALYTICS_PATH  # ← add these
 import streamlit as st
 import os
 
@@ -52,6 +52,8 @@ with st.sidebar:
     st.markdown("**Paths**")
     st.code(f"Logs: {LOGS_PATH}", language="bash")
     st.code(f"Outbox: {OUTBOX_PATH}", language="bash")
+    st.code(f"Tickets: {TICKETS_PATH}", language="bash")        # ← new
+    st.code(f"Analytics: {ANALYTICS_PATH}", language="bash")    # ← new
 
 # Agent is constructed once per browser session.
 # Chat history is stored as a list of (role, message).
