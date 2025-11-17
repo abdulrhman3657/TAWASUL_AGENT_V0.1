@@ -10,5 +10,9 @@
   "user1@example.com": {
     "name": "user1",
     "segment": "standard"
+  },
+  "user2@example.com": {
+    "name": "user1",
+    "segment": "standard"
   }
 }

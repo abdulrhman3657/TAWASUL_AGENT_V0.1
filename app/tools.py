@@ -334,6 +334,33 @@ def upsert_ticket_tool(
 
     _append_jsonl(TICKETS_PATH, record)
 
+    # Auto-escalate high/critical tickets via email
+    if urgency in {"high", "critical"} and status not in {"resolved", "closed"}:
+        subject = f"[AgentX] {urgency.upper()} ticket {ticket_id} for {email}"
+        body_lines = [
+            f"Ticket ID: {ticket_id}",
+            f"User: {email}",
+            f"Topic: {topic}",
+            f"Urgency: {urgency}",
+            f"Emotion: {emotion}",
+            "",
+            "Latest message:",
+            message,
+        ]
+        body = "\n".join(body_lines)
+
+        # This uses the same send_email_tool the agent tool wraps
+        send_email_tool(
+            subject=subject,
+            body=body,
+            to=SUPPORT_EMAIL,
+            meta={
+                "auto_escalated": True,
+                "source": "upsert_ticket_tool",
+                "operation": "created" if is_new else "updated",
+            },
+        )
+
     return {
         "ok": True,
         "ticket_id": ticket_id,
@@ -345,6 +372,7 @@ def upsert_ticket_tool(
         "emotion": emotion,
         "user_email": email,
     }
+
 
 
 
