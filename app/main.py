@@ -35,8 +35,10 @@ def main():
             user = input("\nYou: ").strip()
             if user.lower() in {"exit", "quit"}:
                 break
-            result = agent.run(user)
-            print("Agent:", result)
+            result = agent.invoke({"input": user})
+            reply = result.get("output", str(result))
+            print("Agent:", reply)
+
         except KeyboardInterrupt:
             break
         except Exception as e:

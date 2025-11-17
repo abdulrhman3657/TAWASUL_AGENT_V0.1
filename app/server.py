@@ -19,8 +19,10 @@ agent = build_agent()
 # Returns JSON: {"reply": "..."}.
 @app.post("/chat")
 def chat(req: ChatRequest):
-    reply = agent.run(req.message)
+    result = agent.invoke({"input": req.message})
+    reply = result.get("output", str(result))
     return {"reply": reply}
+
 
 # for example, with uvicorn:
 # uvicorn app.server:app --reload
