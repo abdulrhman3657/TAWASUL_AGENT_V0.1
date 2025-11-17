@@ -273,6 +273,7 @@ def upsert_ticket_tool(
     department: str,
     status: str = "open",
     ticket_id: str | None = None,
+    emotion: str | None = None,
     meta: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """
@@ -289,16 +290,15 @@ def upsert_ticket_tool(
           "ticket_id": "T-000001",
           "user_id": "<user_email>",
           "message": "<latest user message or summary>",
-          "topic": "<short topic label>",
+          "topic": "<topic label>",
           "urgency": "low|medium|high|critical",
           "department": "<billing|support|technical|sales|general>",
           "status": "open|pending|resolved|escalated|closed",
+          "emotion": "neutral|confused|frustrated|angry|sad|happy",
           "event": "created|updated",
           "meta": {...}
         }
 
-    - If ticket_id is None => create a new ticket with a generated 'T-XXXXXX' id.
-    - Otherwise => append an update entry (audit log style) for that ticket_id.
     """
     _ensure_dirs()
     now = time.time()
@@ -328,9 +328,11 @@ def upsert_ticket_tool(
         "urgency": urgency,
         "department": department,
         "status": status,
+        "emotion": emotion,
         "meta": meta or {},
         "event": "created" if is_new else "updated",
     }
+
     _append_jsonl(TICKETS_PATH, record)
 
     return {
@@ -341,8 +343,10 @@ def upsert_ticket_tool(
         "urgency": urgency,
         "department": department,
         "status": status,
+        "emotion": emotion,
         "user_email": email,
     }
+
 
 
 

@@ -1,0 +1,501 @@
+{
+  "tests": [
+    {
+      "id": "off_topic_1",
+      "description": "Off-topic question – politics",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Who is the president of the United States?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I'm a customer service agent and can only help with questions related to our products and services."
+        }
+      ]
+    },
+    {
+      "id": "off_topic_2",
+      "description": "Off-topic mixed with small product reference",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "I’m bored, tell me a joke and also maybe something about your company."
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I'm a customer service agent and can only help with questions related to our products and services."
+        }
+      ]
+    },
+    {
+      "id": "missing_email_1",
+      "description": "User asks about tickets without providing email",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Can you check if I have any open support tickets?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "Please provide the email associated with your account so I can look up your tickets."
+        }
+      ]
+    },
+    {
+      "id": "missing_email_2",
+      "description": "Account access issue without email",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "I can’t log into my account, can you check what’s wrong?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "Please provide the email associated with your account so I can look up your tickets."
+        }
+      ]
+    },
+    {
+      "id": "unknown_user_1",
+      "description": "Unknown user email should not create ticket",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "I want to open a ticket, my email is charlie@example.com and my order is late."
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I don't have enough information to answer that."
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_user_profile",
+          "must_be_called": true,
+          "args_contains": {
+            "user_id": "charlie@example.com"
+          }
+        },
+        {
+          "name": "manage_ticket",
+          "must_be_called": false
+        }
+      ]
+    },
+    {
+      "id": "known_user_new_ticket_1",
+      "description": "Known user with damaged delivery creates new ticket with emotion",
+      "language": "en",
+      "kind": "single_turn",
+      "preconditions": {
+        "tickets_file_empty": true
+      },
+      "steps": [
+        {
+          "role": "user",
+          "message": "My email is alice@example.com. I’d like to report that my last order arrived damaged."
+        },
+        {
+          "role": "assistant",
+          "expected_contains": [
+            "alice@example.com",
+            "ticket",
+            "delivery"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_user_profile",
+          "must_be_called": true,
+          "args_contains": {
+            "user_id": "alice@example.com"
+          }
+        },
+        {
+          "name": "manage_ticket",
+          "must_be_called": true,
+          "args_expect": {
+            "user_id": "alice@example.com",
+            "topic": "delivery_issue",
+            "department": "support",
+            "urgency": "medium",
+            "emotion": "frustrated"
+          }
+        }
+      ],
+      "expected_ticket_event": {
+        "user_email": "alice@example.com",
+        "topic": "delivery_issue",
+        "department": "support",
+        "status": "open",
+        "emotion": "frustrated"
+      }
+    },
+    {
+      "id": "orders_existing_1002",
+      "description": "Existing order 1002 is shipped",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "What is the status of my order 1002?"
+        },
+        {
+          "role": "assistant",
+          "expected_contains": [
+            "1002",
+            "shipped"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "call_api",
+          "must_be_called": true,
+          "args_expect": {
+            "endpoint": "/orders/1002",
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orders_not_found",
+      "description": "Non-existent order should trigger insufficient information phrase",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Can you check order 9999 for me?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I don't have enough information to answer that."
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "call_api",
+          "must_be_called": true,
+          "args_expect": {
+            "endpoint": "/orders/9999",
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orders_unknown_endpoint",
+      "description": "Unknown endpoint should also return insufficient information",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Can you check my wishlist with endpoint /wishlist/123 ?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I don't have enough information to answer that."
+        }
+      ]
+    },
+    {
+      "id": "rag_policy_en",
+      "description": "English refund policy question should use RAG and not ask for email",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "What is your refund policy for digital products?"
+        },
+        {
+          "role": "assistant",
+          "expected_forbidden_contains": [
+            "email",
+            "ticket"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "search_docs",
+          "must_be_called": true
+        }
+      ]
+    },
+    {
+      "id": "rag_policy_ar",
+      "description": "Arabic refund policy question, answer must be in Arabic",
+      "language": "ar",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "ما هي سياسة الاسترجاع لديكم؟"
+        },
+        {
+          "role": "assistant",
+          "expected_language": "ar"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "search_docs",
+          "must_be_called": true
+        }
+      ]
+    },
+    {
+      "id": "ticket_emotion_angry_refund",
+      "description": "Angry refund request with known user should create ticket with refund/billing/high/angry",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "My email is alice@example.com and I’m really angry. I’ve been waiting two weeks for my refund and nothing happened!"
+        },
+        {
+          "role": "assistant",
+          "expected_contains": [
+            "alice@example.com",
+            "refund",
+            "ticket"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_user_profile",
+          "must_be_called": true,
+          "args_contains": {
+            "user_id": "alice@example.com"
+          }
+        },
+        {
+          "name": "manage_ticket",
+          "must_be_called": true,
+          "args_expect": {
+            "user_id": "alice@example.com",
+            "topic": "refund",
+            "department": "billing",
+            "urgency": "high",
+            "emotion": "angry"
+          }
+        }
+      ],
+      "expected_ticket_event": {
+        "user_email": "alice@example.com",
+        "topic": "refund",
+        "department": "billing",
+        "urgency": "high",
+        "emotion": "angry"
+      }
+    },
+    {
+      "id": "policy_general_question_no_ticket",
+      "description": "General policy question should not create a ticket",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Do I need the original packaging to return a product?"
+        },
+        {
+          "role": "assistant",
+          "expected_forbidden_contains": [
+            "ticket",
+            "email"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "manage_ticket",
+          "must_be_called": false
+        }
+      ]
+    },
+    {
+      "id": "close_last_ticket",
+      "description": "User says issue is resolved; last open ticket should be closed",
+      "language": "en",
+      "kind": "single_turn",
+      "preconditions": {
+        "has_open_ticket": true
+      },
+      "steps": [
+        {
+          "role": "user",
+          "message": "My issue is resolved now, you can close the ticket."
+        },
+        {
+          "role": "assistant",
+          "expected_contains": [
+            "marked",
+            "ticket",
+            "resolved"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "close_last_ticket",
+          "must_be_called": true
+        }
+      ],
+      "expected_ticket_event": {
+        "status": "resolved"
+      }
+    },
+    {
+      "id": "escalation_technical_issue",
+      "description": "Complex technical issue should create ticket and escalate via email",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "My app crashes every time I try to pay, and I’ve already tried reinstalling. My email is bob@example.com."
+        },
+        {
+          "role": "assistant",
+          "expected_contains": [
+            "escalated",
+            "ticket",
+            "bob@example.com"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "get_user_profile",
+          "must_be_called": true,
+          "args_contains": {
+            "user_id": "bob@example.com"
+          }
+        },
+        {
+          "name": "manage_ticket",
+          "must_be_called": true,
+          "args_expect": {
+            "user_id": "bob@example.com",
+            "topic": "technical_issue",
+            "department": "technical"
+          }
+        },
+        {
+          "name": "escalate_to_support",
+          "must_be_called": true
+        }
+      ],
+      "expected_outbox_entry": {
+        "to": "support@tawasul31.com",
+        "must_include_in_body": [
+          "bob@example.com"
+        ]
+      }
+    },
+    {
+      "id": "no_fake_ticket_ids",
+      "description": "User asks to check a non-existent ticket id",
+      "language": "en",
+      "kind": "single_turn",
+      "preconditions": {
+        "ticket_id_T_999999_not_present": true
+      },
+      "steps": [
+        {
+          "role": "user",
+          "message": "Can you check ticket T-999999 for me?"
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I don't have enough information to answer that."
+        }
+      ]
+    },
+    {
+      "id": "no_invented_order_ids",
+      "description": "User explicitly asks agent to invent new order number",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "Just create a new fake order number for me so I can test."
+        },
+        {
+          "role": "assistant",
+          "expected_exact": "I don't have enough information to answer that."
+        }
+      ]
+    },
+    {
+      "id": "language_parity_en",
+      "description": "English shipment help; ask for order id, reply in English",
+      "language": "en",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "I need help tracking my shipment."
+        },
+        {
+          "role": "assistant",
+          "expected_language": "en",
+          "expected_contains": [
+            "order",
+            "number"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "language_parity_ar_orders",
+      "description": "Arabic order status query for existing order 1001",
+      "language": "ar",
+      "kind": "single_turn",
+      "steps": [
+        {
+          "role": "user",
+          "message": "أريد معرفة حالة طلبي رقم 1001"
+        },
+        {
+          "role": "assistant",
+          "expected_language": "ar",
+          "expected_contains": [
+            "1001"
+          ]
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "call_api",
+          "must_be_called": true,
+          "args_expect": {
+            "endpoint": "/orders/1001",
+            "method": "GET"
+          }
+        }
+      ]
+    }
+  ]
+}

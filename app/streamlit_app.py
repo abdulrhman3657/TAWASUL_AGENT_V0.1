@@ -33,6 +33,7 @@ from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH, ANALYTICS_PATH
 # -----------------------------
 CONVERSATIONS_DIR = os.path.join(ROOT, "storage", "conversations")
 
+
 def save_conversation_json(session_id: str, history):
     """
     Save the entire conversation for a session into a single JSON file.
@@ -51,6 +52,7 @@ def save_conversation_json(session_id: str, history):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(record, f, ensure_ascii=False, indent=2)
 
+
 # -----------------------------
 # Streamlit UI
 # -----------------------------
@@ -60,12 +62,26 @@ st.set_page_config(page_title="Agentic AI — Round 1", page_icon="🤖")
 with st.sidebar:
     st.header("Settings")
     model = st.text_input("Model", os.environ.get("OPENAI_MODEL", "gpt-4o-mini"))
+
     if st.button("Rebuild RAG index"):
         try:
             build_vectorstore()
             st.success("RAG index rebuilt successfully.")
         except Exception as e:
             st.error(f"Error building index: {e}")
+
+    # 🆕 Start a completely new conversation (new session_id, new agent, cleared history)
+    if st.button("🆕 Start New Conversation"):
+        # reset conversation-specific state
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.agent = build_agent(model=model)
+        st.session_state.history = []
+
+        # support both new and old Streamlit versions
+        if hasattr(st, "rerun"):
+            st.rerun()
+        elif hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
 
     st.markdown("**Paths**")
     st.code(f"Logs: {LOGS_PATH}", language="bash")

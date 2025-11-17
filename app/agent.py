@@ -87,6 +87,49 @@ SYSTEM_PROMPT = (
     "      \"I don't have enough information to answer that.\"\n"
     "- You must NOT guess policies, order states, or user details.\n"
     "\n"
+    "TICKET CLASSIFICATION RULES:\n"
+    "- When creating or updating a ticket (manage_ticket tool), you MUST classify all of the following:\n"
+    "    1) topic\n"
+    "    2) department\n"
+    "    3) urgency\n"
+    "    4) emotion\n"
+    "- You MUST use ONLY these values:\n"
+    "\n"
+    "  topic:\n"
+    "    • order_status\n"
+    "    • delivery_issue\n"
+    "    • refund\n"
+    "    • return_exchange\n"
+    "    • billing_payment\n"
+    "    • technical_issue\n"
+    "    • account_access\n"
+    "    • general_question\n"
+    "\n"
+    "  department:\n"
+    "    • support\n"
+    "    • billing\n"
+    "    • technical\n"
+    "    • sales\n"
+    "    • general\n"
+    "\n"
+    "  urgency:\n"
+    "    • low\n"
+    "    • medium\n"
+    "    • high\n"
+    "    • critical\n"
+    "\n"
+    "  emotion:\n"
+    "    • neutral\n"
+    "    • confused\n"
+    "    • frustrated\n"
+    "    • angry\n"
+    "    • sad\n"
+    "    • happy\n"
+    "\n"
+    "- Choose the classification based strictly on the user's message.\n"
+    "- Do NOT invent new labels.\n"
+    "- Do NOT leave any required field empty.\n"
+    "\n"
     "TOOL USAGE RULES:\n"
     "- 'search_docs' → Use for FAQs and policies.\n"
     "- 'get_user_profile' → Only AFTER the user provides an email.\n"
@@ -104,12 +147,14 @@ SYSTEM_PROMPT = (
     "      \"I don't have enough information to answer that.\"\n"
     "4) If the user says the issue is solved and a real ticket exists, call 'close_last_ticket'.\n"
     "5) After escalation, inform the user that their issue was escalated.\n"
+    "6) When creating or updating a ticket, ALWAYS include topic, department, urgency, and emotion.\n"
     "\n"
     "GENERAL STYLE:\n"
     "- Be concise, professional, and helpful.\n"
     "- Never invent details.\n"
     "- Only use data from tools and the user.\n"
 )
+
 
 
 
@@ -156,7 +201,7 @@ class SearchDocsInput(BaseModel):
 class TicketUpsertInput(BaseModel):
     user_id: str = Field(
         ...,
-        description="Stable identifier for the user (email, phone, or customer id).",
+        description="The user's email address. Must be exactly the email provided by the user.",
     )
     message: str = Field(
         ...,
@@ -164,7 +209,11 @@ class TicketUpsertInput(BaseModel):
     )
     topic: str = Field(
         ...,
-        description="Short topic label (e.g., 'refund', 'delivery_delay', 'technical_issue').",
+        description=(
+            "Short topic label. One of: "
+            "order_status, delivery_issue, refund, return_exchange, "
+            "billing_payment, technical_issue, account_access, general_question."
+        ),
     )
     urgency: str = Field(
         ...,
@@ -172,7 +221,7 @@ class TicketUpsertInput(BaseModel):
     )
     department: str = Field(
         ...,
-        description="Target department (e.g., 'billing', 'support', 'technical', 'sales', 'general').",
+        description="Target department. One of: support, billing, technical, sales, general.",
     )
     status: str = Field(
         "open",
@@ -182,12 +231,20 @@ class TicketUpsertInput(BaseModel):
         None,
         description="Existing ticket id to update, or leave empty to create a new one.",
     )
+    emotion: str = Field(
+        ...,
+        description=(
+            "User emotion inferred from the message. "
+            "One of: neutral, confused, frustrated, angry, sad, happy."
+        ),
+    )
+
 
 
 class UserProfileInput(BaseModel):
     user_id: str = Field(
         ...,
-        description="Stable identifier for the user (same as passed to ticket tools).",
+        description="The user's email address (same email provided by the user).",
     )
 
 
@@ -240,19 +297,25 @@ def build_agent(model: str = "gpt-4o-mini"):
         ),
         StructuredTool.from_function(
             name="manage_ticket",
-            func=lambda user_id, message, topic, urgency, department, status="open", ticket_id=None: upsert_ticket_tool(
+            func=lambda user_id, message, topic, urgency, department, emotion, status="open", ticket_id=None: upsert_ticket_tool(
                 user_id=user_id,
                 message=message,
                 topic=topic,
                 urgency=urgency,
                 department=department,
+                emotion=emotion,
                 status=status,
                 ticket_id=ticket_id,
             ),
             args_schema=TicketUpsertInput,
             description=(
                 "Create or update a support ticket. "
-                "Always include topic, urgency, and department. "
+                "Always include topic, department, urgency, and emotion. "
+                "topic ∈ {order_status, delivery_issue, refund, return_exchange, "
+                "billing_payment, technical_issue, account_access, general_question}. "
+                "department ∈ {support, billing, technical, sales, general}. "
+                "urgency ∈ {low, medium, high, critical}. "
+                "emotion ∈ {neutral, confused, frustrated, angry, sad, happy}. "
                 "If updating, pass the existing ticket_id."
             ),
         ),
