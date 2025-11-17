@@ -1,0 +1,5 @@
+{
+  "1001": {"state": "processing"},
+  "1002": {"state": "shipped"},
+  "1003": {"state": "cancelled"}
+}

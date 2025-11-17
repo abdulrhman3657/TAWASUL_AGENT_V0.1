@@ -1,0 +1,10 @@
+{
+  "alice@example.com": {
+    "name": "Alice",
+    "segment": "vip"
+  },
+  "bob@example.com": {
+    "name": "Bob",
+    "segment": "standard"
+  }
+}
