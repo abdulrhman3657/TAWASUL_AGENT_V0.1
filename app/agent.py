@@ -17,7 +17,6 @@ from .tools import (
     send_email_tool,
     upsert_ticket_tool,
     get_user_profile_tool,
-    record_analytics_tool,
     close_last_open_ticket_tool,
     SUPPORT_EMAIL,
 )
@@ -136,7 +135,7 @@ SYSTEM_PROMPT = (
     "- 'manage_ticket' → Only for real, existing users and ONLY with valid user_ids.\n"
     "- 'close_last_ticket' → Only when user confirms resolution AND a real ticket exists.\n"
     "- 'send_email' → Escalate urgent or unclear in-domain cases.\n"
-    "- 'record_analytics' / 'save_text' → Use for logging.\n"
+    "- 'save_text' → Use for logging.\n"
     "- 'call_api' → Only for valid dummy order IDs.\n"
     "- NEVER invent arguments for tools (no fake ticket_id, order_id, email, etc.).\n"
     "\n"
@@ -247,27 +246,6 @@ class UserProfileInput(BaseModel):
         description="The user's email address (same email provided by the user).",
     )
 
-
-class AnalyticsInput(BaseModel):
-    ticket_id: str = Field(..., description="Ticket id for which to log analytics.")
-    status: str = Field(
-        ...,
-        description="Final status of this interaction (e.g., 'resolved', 'escalated').",
-    )
-    escalated: bool = Field(
-        ...,
-        description="True if a human or email escalation was involved.",
-    )
-    response_time_sec: Optional[float] = Field(
-        None,
-        description="Optional response time in seconds, if available.",
-    )
-    rating: Optional[float] = Field(
-        None,
-        description="Optional satisfaction rating (1-5, etc.) provided by the user.",
-    )
-
-
 class CloseLastTicketInput(BaseModel):
     # Dummy field so the tool schema is non-empty; value is ignored.
     dummy: str = Field(
@@ -326,21 +304,6 @@ def build_agent(model: str = "gpt-4o-mini"):
             description=(
                 "Look up whether a user is new, returning, and whether they have open tickets, "
                 "based on their user_id."
-            ),
-        ),
-        StructuredTool.from_function(
-            name="record_analytics",
-            func=lambda ticket_id, status, escalated, response_time_sec=None, rating=None: record_analytics_tool(
-                ticket_id=ticket_id,
-                status=status,
-                escalated=bool(escalated),
-                response_time_sec=response_time_sec,
-                rating=rating,
-            ),
-            args_schema=AnalyticsInput,
-            description=(
-                "Record analytics for a ticket: final status, whether it was escalated, "
-                "optional response time, and optional rating."
             ),
         ),
         StructuredTool.from_function(

@@ -12,7 +12,6 @@ The agent can:
 - Retrieve knowledge via RAG  
 - Escalate critical issues to human support  
 - Save conversation notes  
-- Track analytics   
 
 ---
 

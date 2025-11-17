@@ -1,0 +1,122 @@
+[
+  {
+    "question": "What payment methods do you accept?",
+    "answer": "We accept all major credit and debit cards, PayPal, Apple Pay, Google Pay, and select \"Buy Now, Pay Later\" options such as Klarna and Afterpay."
+  },
+  {
+    "question": "Is my payment information secure?",
+    "answer": "Yes. All transactions are processed through encrypted payment gateways that comply with PCI DSS security standards. We never store your card details."
+  },
+  {
+    "question": "Do I need to create an account to place an order?",
+    "answer": "No, you can check out as a guest. However, creating an account allows you to track orders, manage returns, and receive special offers."
+  },
+  {
+    "question": "How can I track my order?",
+    "answer": "Once your order ships, you’ll receive a tracking link via email or SMS. You can also log in to your account to track the delivery status anytime."
+  },
+  {
+    "question": "How long will it take to receive my order?",
+    "answer": "Standard shipping usually takes 3–7 business days, depending on your location. Express delivery options are available at checkout for faster service."
+  },
+  {
+    "question": "Do you offer international shipping?",
+    "answer": "Yes, we ship to most countries worldwide. Shipping times and fees vary based on destination and local customs regulations."
+  },
+  {
+    "question": "How much does shipping cost?",
+    "answer": "Shipping is free for orders over $50. For smaller orders, shipping fees are calculated at checkout based on your address and selected shipping method."
+  },
+  {
+    "question": "Can I change or cancel my order after placing it?",
+    "answer": "Orders can be changed or canceled within one hour of placement. After that, the order is likely already in processing and can’t be modified."
+  },
+  {
+    "question": "What should I do if I entered the wrong address?",
+    "answer": "Contact our customer support as soon as possible at support@company.com. If the order hasn’t shipped yet, we can update the address."
+  },
+  {
+    "question": "What if my order hasn’t arrived yet?",
+    "answer": "Check your tracking information first. If it shows \"delivered\" but you haven’t received it, contact our support team for assistance."
+  },
+  {
+    "question": "What is your return policy?",
+    "answer": "We accept returns within 30 days of delivery for most items, provided they are unused and in original packaging. Some exclusions apply (e.g., final sale items)."
+  },
+  {
+    "question": "How do I start a return?",
+    "answer": "Go to your order history, click \"Request Return\", select the item, and print the prepaid return label. Drop the package at your nearest shipping point."
+  },
+  {
+    "question": "When will I receive my refund?",
+    "answer": "Once we receive and inspect your returned item, your refund will be processed within 3–5 business days. Refunds appear in your account within 7–10 days."
+  },
+  {
+    "question": "Can I exchange an item instead of returning it?",
+    "answer": "Yes. If the replacement is in stock, we’ll process an exchange once the original item is returned. Exchanges are subject to availability."
+  },
+  {
+    "question": "What should I do if I received a damaged or defective product?",
+    "answer": "Please contact support@company.com within 48 hours of delivery with photos of the issue. We’ll send a replacement or issue a full refund."
+  },
+  {
+    "question": "Do you offer gift wrapping or personalized messages?",
+    "answer": "Yes, gift wrapping and message cards are available at checkout for a small additional fee."
+  },
+  {
+    "question": "Can I use multiple promo codes on one order?",
+    "answer": "Only one promo code can be applied per order. However, promo codes can be combined with automatic discounts such as free shipping offers."
+  },
+  {
+    "question": "How can I use a gift card?",
+    "answer": "Enter the gift card code at checkout. The balance will automatically apply to your total. If your order exceeds the balance, you can pay the difference."
+  },
+  {
+    "question": "How do I know what size to order?",
+    "answer": "Each product page includes a detailed size chart. You can also use our \"Find My Fit\" tool for personalized recommendations."
+  },
+  {
+    "question": "Are your products authentic?",
+    "answer": "Yes. All products sold on our website are 100% authentic and sourced directly from verified suppliers or official brand partners."
+  },
+  {
+    "question": "Do you restock sold-out items?",
+    "answer": "Popular items are often restocked. You can click \"Notify Me\" on a product page to receive an email when the item becomes available again."
+  },
+  {
+    "question": "How do I contact customer support?",
+    "answer": "You can reach us by email at support@company.com or through live chat on our website, available Monday–Friday, 9 AM–6 PM (local time)."
+  },
+  {
+    "question": "Do you offer wholesale or bulk discounts?",
+    "answer": "Yes. For orders over 50 units, contact sales@company.com for wholesale pricing and partnership opportunities."
+  },
+  {
+    "question": "What should I do if I forgot my password?",
+    "answer": "Go to the login page and click \"Forgot Password\". You’ll receive an email with a secure link to reset your password."
+  },
+  {
+    "question": "Can I subscribe to your newsletter?",
+    "answer": "Absolutely. Sign up via the footer on our website to receive updates on new arrivals, exclusive discounts, and seasonal sales."
+  },
+  {
+    "question": "Are there any hidden fees at checkout?",
+    "answer": "No. The total price displayed at checkout includes all applicable taxes and fees. International orders may incur customs duties based on your country."
+  },
+  {
+    "question": "How can I apply for a return if I bought as a guest?",
+    "answer": "Visit the \"Track My Order\" page, enter your email and order number, then click \"Return an Item\"."
+  },
+  {
+    "question": "Do you offer loyalty rewards?",
+    "answer": "Yes, our rewards program lets you earn points for purchases, reviews, and referrals. Points can be redeemed for discounts on future orders."
+  },
+  {
+    "question": "Can I preorder upcoming items?",
+    "answer": "Yes. Preorder products are clearly marked and shipped on the release date shown on the product page."
+  },
+  {
+    "question": "How do I delete my account or personal data?",
+    "answer": "Contact privacy@company.com to request account deletion or data export under GDPR/CCPA compliance."
+  }
+]

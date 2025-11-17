@@ -14,7 +14,6 @@ OUTBOX_DIR = os.path.join(BASE_DIR, "..", "outbox")
 
 LOGS_PATH = os.path.join(STORAGE_DIR, "logs.jsonl")
 TICKETS_PATH = os.path.join(STORAGE_DIR, "tickets.jsonl")
-ANALYTICS_PATH = os.path.join(STORAGE_DIR, "analytics.jsonl")
 OUTBOX_PATH = os.path.join(OUTBOX_DIR, "emails.jsonl")
 
 # Mock data directory (static dummy backend data)
@@ -359,6 +358,8 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
     - If the email is not present in mock_data/users.json, the user is considered unknown.
 
     Returns:
+    - ok: bool (True if user is known, False otherwise)
+    - reason: str | None (e.g. 'unknown_user' on failure)
     - user_id: the normalized email
     - known_user: bool (email exists in users.json)
     - is_new_user: bool (known user but no tickets yet)
@@ -378,8 +379,8 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
         if str(e.get("user_id", "")).strip().lower() == email
     ]
 
+    # Unknown user in dummy backend
     if profile is None:
-        # Email is unknown in the dummy backend
         return {
             "ok": False,
             "reason": "unknown_user",
@@ -394,9 +395,11 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
             "profile": None,
         }
 
+    # Known user, but no tickets yet
     if not user_events:
-        # Known user, but no tickets yet
         return {
+            "ok": True,
+            "reason": None,
             "user_id": email,
             "known_user": True,
             "is_new_user": True,
@@ -425,6 +428,8 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
     last_ticket_ts = max(e.get("ts", 0) for e in user_events) if user_events else None
 
     return {
+        "ok": True,
+        "reason": None,
         "user_id": email,
         "known_user": True,
         "is_new_user": total_tickets == 0,
@@ -434,42 +439,6 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
         "last_ticket_ts": last_ticket_ts,
         "profile": profile,
     }
-
-
-
-# --------------------------------------------------------------------
-# Analytics
-# --------------------------------------------------------------------
-
-
-def record_analytics_tool(
-    ticket_id: str,
-    status: str,
-    escalated: bool,
-    response_time_sec: float | None = None,
-    rating: float | None = None,
-    meta: Dict[str, Any] | None = None,
-) -> str:
-    """
-    Record basic analytics for a conversation / ticket:
-
-    - status: 'resolved', 'escalated', etc.
-    - escalated: whether a human was involved.
-    - response_time_sec: optional latency metric.
-    - rating: optional user satisfaction score (1–5, etc.).
-    """
-    _ensure_dirs()
-    record = {
-        "ts": time.time(),
-        "ticket_id": ticket_id,
-        "status": status,
-        "escalated": escalated,
-        "response_time_sec": response_time_sec,
-        "rating": rating,
-        "meta": meta or {},
-    }
-    _append_jsonl(ANALYTICS_PATH, record)
-    return f"Recorded analytics for ticket {ticket_id} with status='{status}'."
 
 
 # --------------------------------------------------------------------
@@ -485,6 +454,9 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
     - Scan tickets.jsonl via _read_ticket_events()
     - Find the latest record whose status is not in {'resolved', 'closed'}
     - Append a new record with status='resolved' and event='updated'
+
+    This version preserves the last ticket's urgency and emotion instead of
+    resetting them to 'low' or dropping emotion.
     """
     events = _read_ticket_events()
     if not events:
@@ -510,6 +482,10 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
     topic = last_open_record.get("topic")
     department = last_open_record.get("department")
 
+    # 🔧 Preserve urgency & emotion from the last open record
+    urgency = last_open_record.get("urgency", "low")
+    emotion = last_open_record.get("emotion", "neutral")
+
     updated = {
         "schema": 1,
         "type": "ticket_event",
@@ -518,10 +494,14 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
         "user_id": user_id,
         "message": "Ticket closed by close_last_open_ticket_tool.",
         "topic": topic,
-        "urgency": "low",
+        "urgency": urgency,
         "department": department,
         "status": "resolved",
-        "meta": {"auto_closed": True},
+        "emotion": emotion,
+        "meta": {
+            **(last_open_record.get("meta") or {}),
+            "auto_closed": True,
+        },
         "event": "updated",
     }
     _append_jsonl(TICKETS_PATH, updated)
@@ -532,4 +512,5 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
         "status": "resolved",
         "closed_ts": now,
     }
+
 
