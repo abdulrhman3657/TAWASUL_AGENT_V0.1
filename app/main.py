@@ -1,48 +1,77 @@
+# app/main.py
 # This file is the command-line chat app.
 
-import os # os is used to read environment variables (like OPENAI_MODEL).
+import os
+from .agent import build_agent
+from .tools import save_text_tool
+from .fallback_detector import is_semantic_fallback
 
-# build_agent is your factory function from app/agent.py that:
-# creates the OpenAI chat model,
-# registers all the tools (save_text, call_api, send_email, search_docs),
-# wires memory (ConversationBufferMemory + MessagesPlaceholder),
-# returns a LangChain AgentExecutor object.
-from .agent import build_agent 
 
 print("Loaded key:", os.getenv("OPENAI_API_KEY"))
 
 
 def main():
-    # Reads OPENAI_MODEL from env, defaulting to "gpt-4o-mini":
-    # checks for an environment variable called OPENAI_MODEL.
-    # If it exists, it uses that (e.g. "gpt-4o" or your preferred model).
-    # If not, it defaults to "gpt-4o-mini".
+    """
+    Interactive CLI chatbot.
+
+    Features:
+    - Uses the same agent as Streamlit + FastAPI.
+    - Embedding-based fallback detection → auto-log FAQ candidates.
+    - Never crashes the CLI on LLM/tool errors.
+    """
+
+    # Pick model from environment or default
     model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-    # Builds the agent:
-    # Inside build_agent:
-    # ChatOpenAI(model=model, temperature=0.2) -> the LLM
-    # Create StructuredTools
-    # Initialize an AgentExecutor
+    # Build the agent (LLM, tools, memory, system prompt)
     agent = build_agent(model=model)
 
     print("Agent ready. Type 'exit' to quit.")
-    
-    # Runs an input loop
-    # use python -m app.main
+
+    # REPL loop
     while True:
         try:
             user = input("\nYou: ").strip()
             if user.lower() in {"exit", "quit"}:
                 break
+
+            # Run agent
             result = agent.invoke({"input": user})
             reply = result.get("output", str(result))
             print("Agent:", reply)
 
+            # --- Semantic fallback detection → FAQ auto-logging ---
+            try:
+                is_fb, score = is_semantic_fallback(reply)
+                if is_fb:
+                    # Prevent logging private data (very basic filter)
+                    has_email = "@" in user
+                    number_digits = "".join(c for c in user if c.isdigit())
+                    is_long_number = len(number_digits) >= 6
+
+                    if not has_email and not is_long_number:
+                        save_text_tool(
+                            text=user,
+                            tag="faq_candidate",
+                            meta={
+                                "source": "cli",
+                                "similarity": score,
+                            },
+                        )
+                        print("(Logged as FAQ candidate)")
+            except Exception as e:
+                print("Warning: FAQ logging failed:", e)
+
         except KeyboardInterrupt:
             break
+
         except Exception as e:
             print("Error:", e)
 
+
 if __name__ == "__main__":
     main()
+
+
+# To run:
+# python -m app.main

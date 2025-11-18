@@ -25,7 +25,8 @@ assert (APP_DIR / "agent.py").exists(), f"Missing agent.py at {APP_DIR}"
 
 from app.agent import build_agent
 from app.rag import build_vectorstore
-from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH
+from app.tools import LOGS_PATH, OUTBOX_PATH, TICKETS_PATH, save_text_tool
+from app.fallback_detector import is_semantic_fallback
 
 # -----------------------------
 #  Conversation logging (Python-controlled)
@@ -128,7 +129,31 @@ if user_input:
             st.markdown(reply)
             st.session_state.history.append(("assistant", reply))
 
-    # 3) 💾 Save/overwrite this session's conversation JSON
+    # 3) Semantic fallback detection -> auto-log FAQ candidate
+    try:
+        is_fb, score = is_semantic_fallback(reply)
+        if is_fb:
+            user_text = user_input.strip()
+
+            # crude PII guard: don't log obvious emails or long numeric IDs
+            has_email = "@" in user_text
+            digits = "".join(ch for ch in user_text if ch.isdigit())
+            long_number = len(digits) >= 6
+
+            if not has_email and not long_number:
+                save_text_tool(
+                    text=user_text,
+                    tag="faq_candidate",
+                    meta={
+                        "source": "streamlit",
+                        "session_id": st.session_state.session_id,
+                        "similarity": score,
+                    },
+                )
+    except Exception as e:
+        st.warning(f"Failed to log FAQ candidate: {e}")
+
+    # 4) 💾 Save/overwrite this session's conversation JSON
     try:
         save_conversation_json(
             st.session_state.session_id,
