@@ -474,43 +474,79 @@ def get_user_profile_tool(user_id: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------
 
 
-def close_last_open_ticket_tool() -> Dict[str, Any]:
+def close_last_open_ticket_tool(user_id: str) -> Dict[str, Any]:
     """
-    Close the most recent non-resolved ticket (no args required).
+    Close the most recent non-resolved ticket for a specific user.
 
-    Intended for simple demos / single-user flows:
+    - user_id is treated as the user's email address.
+    - The email MUST exist in mock_data/users.json; otherwise, no ticket is closed.
+
+    Behavior:
     - Scan tickets.jsonl via _read_ticket_events()
+    - Filter to events for this user
     - Find the latest record whose status is not in {'resolved', 'closed'}
     - Append a new record with status='resolved' and event='updated'
-
-    This version preserves the last ticket's urgency and emotion instead of
-    resetting them to 'low' or dropping emotion.
     """
+    email = str(user_id).strip().lower()
+
+    # Ensure this is a known user in the dummy backend
+    users = _load_dummy_users()
+    if email not in users:
+        return {
+            "ok": False,
+            "reason": "unknown_user",
+            "message": "User email not found in demo data.",
+            "user_id": email,
+        }
+
     events = _read_ticket_events()
     if not events:
-        return {"ok": False, "reason": "no_tickets_file"}
+        return {
+            "ok": False,
+            "reason": "no_tickets_file",
+            "message": "No tickets file found.",
+            "user_id": email,
+        }
+
+    # Filter events for this user only
+    user_events: List[Dict[str, Any]] = [
+        e for e in events
+        if str(e.get("user_id", "")).strip().lower() == email
+    ]
+
+    if not user_events:
+        return {
+            "ok": False,
+            "reason": "no_tickets_for_user",
+            "message": "No tickets found for this user.",
+            "user_id": email,
+        }
 
     last_open_record: Dict[str, Any] | None = None
 
-    for rec in events:
+    for rec in user_events:
         status = rec.get("status")
         if status in {"resolved", "closed"}:
             continue
 
-        # keep the latest open/non-resolved record
+        # keep the latest open/non-resolved record for this user
         if last_open_record is None or rec.get("ts", 0) > last_open_record.get("ts", 0):
             last_open_record = rec
 
     if last_open_record is None:
-        return {"ok": False, "reason": "no_open_ticket"}
+        return {
+            "ok": False,
+            "reason": "no_open_ticket",
+            "message": "No open tickets found for this user.",
+            "user_id": email,
+        }
 
     now = time.time()
     ticket_id = last_open_record.get("ticket_id")
-    user_id = last_open_record.get("user_id")
     topic = last_open_record.get("topic")
     department = last_open_record.get("department")
 
-    # 🔧 Preserve urgency & emotion from the last open record
+    # Preserve urgency & emotion from the last open record
     urgency = last_open_record.get("urgency", "low")
     emotion = last_open_record.get("emotion", "neutral")
 
@@ -519,7 +555,7 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
         "type": "ticket_event",
         "ts": now,
         "ticket_id": ticket_id,
-        "user_id": user_id,
+        "user_id": email,
         "message": "Ticket closed by close_last_open_ticket_tool.",
         "topic": topic,
         "urgency": urgency,
@@ -539,6 +575,8 @@ def close_last_open_ticket_tool() -> Dict[str, Any]:
         "ticket_id": ticket_id,
         "status": "resolved",
         "closed_ts": now,
+        "user_id": email,
     }
+
 
 

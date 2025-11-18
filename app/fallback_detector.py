@@ -5,13 +5,15 @@ from typing import Tuple, List
 from langchain_openai import OpenAIEmbeddings
 import math
 
+# new faqs logger
 
 # Canonical fallback replies the model is supposed to use
 FALLBACK_SENTENCES = [
     "I don't have enough information to answer that.",
-    "I'm a customer service agent and can only help with questions related to our products and services.",
     "لا أملك معلومات كافية للإجابة على ذلك.",
 ]
+# you can add "I'm a customer service agent and can only help with questions related to our products and services."
+# for more general logging
 
 
 def _cosine_similarity(a: List[float], b: List[float]) -> float:

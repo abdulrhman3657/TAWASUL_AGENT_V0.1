@@ -1,6 +1,12 @@
 {
   "tests": [
     {
+      "name": "in topic question  but not in faq list",
+      "context": [],
+      "user": "what is your policy for renting technical products?",
+      "expected_exact": "I don't have enough information to answer that."
+    },
+    {
       "name": "Ask for email before ticket actions",
       "context": [],
       "user": "I want to open a ticket, my order is late",

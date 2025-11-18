@@ -22,5 +22,9 @@
   "user4@example.com": {
     "name": "user1",
     "segment": "standard"
+  },
+  "user5@example.com": {
+    "name": "user1",
+    "segment": "standard"
   }
 }

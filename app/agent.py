@@ -12,7 +12,6 @@ from langchain_core.prompts import MessagesPlaceholder
 from langchain.tools import StructuredTool
 
 from .tools import (
-    save_text_tool,
     call_api_tool,
     send_email_tool,
     upsert_ticket_tool,
@@ -81,40 +80,24 @@ SYSTEM_PROMPT = (
     "- Refunds, returns, cancellations, exchanges.\n"
     "- Billing, payments, subscriptions, invoices.\n"
     "- Product usage, technical issues, troubleshooting, account access.\n"
-    "- Policies and FAQs found in the RAG knowledge base.\n"
+    "- Any policies and FAQs related to our products and services (even if you do not know the exact answer).\n"
     "- Simple questions about yourself (your name, your identity as AgentX, what you can help with, or whether you remember previous messages).\n"
     "\n"
     "OFF-TOPIC HANDLING:\n"
-    "- If the user asks about anything outside the allowed topics (HR, internal policies, general knowledge, "
-    "politics, unrelated personal questions about other people, etc.), you MUST respond with this exact sentence:\n"
+    "- Questions are IN-DOMAIN if they are about our products, services, orders, accounts, or any policies/FAQs related to them, even if you currently lack specific information.\n"
+    "- Only treat a question as OFF-TOPIC if it is clearly unrelated to our business, for example: general knowledge, politics, history, math, HR about other companies, or random personal questions about other people.\n"
+    "- For OFF-TOPIC questions, you MUST respond with this exact sentence:\n"
     "      \"I'm a customer service agent and can only help with questions related to our products and services.\"\n"
+    "- Do NOT use this OFF-TOPIC sentence for questions about our policies, refunds, returns, order issues, billing, technical problems, or other support scenarios. Those are IN-DOMAIN.\n"
     "- Do NOT treat simple questions about yourself as off-topic.\n"
     "- For truly off-topic questions, give ONLY that exact sentence and nothing else.\n"
     "\n"
     "INSUFFICIENT INFORMATION (IN-DOMAIN):\n"
-    "- If a tool returns incomplete data, or cannot confirm an identifier for an IN-DOMAIN question, you MUST respond with:\n"
+    "- If a question is IN-DOMAIN (orders, shipping, refunds, returns, billing, subscriptions, product usage, technical issues, account access, or any policy/FAQ about our products and services), but tools and the knowledge base do not give you enough data to answer confidently, you MUST respond with:\n"
     "      \"I don't have enough information to answer that.\"\n"
+    "- This includes missing or incomplete policy details such as rental terms, special conditions, or edge cases.\n"
     "- You must NOT guess policies, order states, or user details.\n"
-    "- When you decide to give this exact answer for an IN-DOMAIN question (orders, shipping, refunds, billing, account, technical issues, or policies), you MUST also call the 'save_text' tool BEFORE sending your final answer, to log a potential FAQ.\n"
-    "- For that 'save_text' call:\n"
-    "      • Use tag='faq_candidate'.\n"
-    "      • Put the user's full original question in the 'text' field.\n"
-    "      • Do NOT include any personal identifiers (emails, phone numbers, order IDs). If the question contains identifiers, rephrase it into a general form before saving.\n"
-    "\n"
-    "FAQ LOGGING RULE (save_text):\n"
-    "- You have a save_text tool for logging FAQ candidates into an internal log file.\n"
-    "- Use save_text ONLY when ALL of the following are true:\n"
-    "    1) The user asks an in-domain, general, policy/FAQ-style question (not about a specific order, ticket, or personal case).\n"
-    "    2) You have already tried to answer using tools and 'search_docs', but you still must reply with:\n"
-    "         \"I don't have enough information to answer that.\"\n"
-    "    3) The question is something that could reasonably become a reusable FAQ entry for future users.\n"
-    "- When these conditions are met, you SHOULD call save_text exactly once for that question, in addition to your normal reply.\n"
-    "- For save_text, you MUST:\n"
-    "    • Use tag='faq_candidate'.\n"
-    "    • Save ONLY the user's question text, in this format:\n"
-    "         \"Q: <user question>\"\n"
-    "    • NEVER include any personal data (no order_id, ticket_id, email, phone number, address, or other identifiers).\n"
-    "- Do NOT call save_text just because the user says things like \"remember this\" or \"save this\". It is ONLY for automatic FAQ candidate logging under the conditions above.\n"
+    "- The surrounding system may automatically log these \"I don't have enough information to answer that.\" cases as potential FAQ candidates. You do NOT need to trigger any logging yourself.\n"
     "\n"
     "TICKET CLASSIFICATION RULES:\n"
     "- When creating or updating a ticket (manage_ticket tool), you MUST classify all of the following:\n"
@@ -163,15 +146,10 @@ SYSTEM_PROMPT = (
     "- 'search_docs' → Use for FAQs and policies.\n"
     "- 'get_user_profile' → Only AFTER the user provides an email.\n"
     "- 'manage_ticket' → Only for real, existing users and ONLY with valid user_ids.\n"
-    "- 'close_last_ticket' → Only when user confirms resolution AND a real ticket exists.\n"
+    "- 'close_last_ticket' → Only when the user confirms resolution AND a real ticket exists for that user email.\n"
     "- 'escalate_to_support' → Escalate complex or urgent in-domain cases.\n"
-    "- 'save_text' → Use ONLY in two cases:\n"
-    "      1) When you are about to answer an IN-DOMAIN question with \"I don't have enough information to answer that.\" (log a faq_candidate).\n"
-    "      2) When you explicitly need to log a recurring, general issue (no personal identifiers).\n"
-    "    In both cases, use tag='faq_candidate' and store a general, non-personal version of the user's question.\n"
     "- 'call_api' → Only for valid dummy order IDs.\n"
     "- NEVER invent arguments for tools (no fake ticket_id, order_id, email, etc.).\n"
-
     "\n"
     "BEHAVIOR RULES:\n"
     "1) When referencing ticket_id, order_id, or email, use ONLY identifiers from tools or the user's messages.\n"
@@ -196,16 +174,10 @@ SYSTEM_PROMPT = (
 
 
 
+
+
+
 # ---------- Pydantic arg schemas ----------
-
-
-class SaveTextInput(BaseModel):
-    text: str = Field(..., description="The content or insight to save.")
-    tag: str = Field(
-        "note",
-        description="Optional tag for classification (e.g., 'faq_candidate', 'bug', 'trend').",
-    )
-
 
 class CallApiInput(BaseModel):
     endpoint: str = Field(..., description="e.g., /orders/12345")
@@ -284,11 +256,11 @@ class UserProfileInput(BaseModel):
     )
 
 class CloseLastTicketInput(BaseModel):
-    # Dummy field so the tool schema is non-empty; value is ignored.
-    dummy: str = Field(
-        "ok",
-        description="Always 'ok'. No real arguments are needed; this just closes the last open ticket.",
+    user_id: str = Field(
+        ...,
+        description="The user's email address (same email provided by the user).",
     )
+
 
 
 # ---------- Build agent ----------
@@ -346,22 +318,13 @@ def build_agent(model: str = "gpt-4o-mini"):
         ),
         StructuredTool.from_function(
             name="close_last_ticket",
-            func=lambda dummy="ok": close_last_open_ticket_tool(),
+            func=lambda user_id: close_last_open_ticket_tool(user_id=user_id),
             args_schema=CloseLastTicketInput,
             description=(
-                "Close the most recent open ticket by marking it as resolved. "
+                "Close the most recent open ticket for the given user email by marking it as resolved. "
                 "Use this whenever the user says things like 'close the ticket', "
                 "'mark this as resolved', or clearly indicates the issue is solved. "
-                "No ticket id is required."
-            ),
-        ),
-        StructuredTool.from_function(
-            name="save_text",
-            func=lambda text, tag="note": save_text_tool(text=text, tag=tag),
-            args_schema=SaveTextInput,
-            description=(
-                "Store snippets, FAQ candidates, or repeated issues. "
-                "Use tag='faq_candidate' for potential new FAQ entries."
+                "No ticket id is required, but the user's email is required."
             ),
         ),
         StructuredTool.from_function(

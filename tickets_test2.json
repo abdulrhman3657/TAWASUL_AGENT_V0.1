@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "name": "Close ticket for known user with existing open ticket",
+      "steps": [
+        "Start new conversation.",
+        "User says: 'My email is alice@example.com.'",
+        "User says: 'I’m having trouble with my recent order, please open a support ticket.'",
+        "Agent should create a ticket.",
+        "User says: 'Thanks, my issue is solved. Please close the ticket.'",
+        "Agent should call close_last_ticket with user_id='alice@example.com' and mark ticket as resolved."
+      ],
+      "expected": {
+        "agent_reply": "Ticket marked as resolved.",
+        "ticket_file_changes": [
+          "A new ticket_event with event='updated' and status='resolved' for alice@example.com"
+        ]
+      }
+    },
+    {
+      "name": "Close ticket for known user with NO tickets",
+      "steps": [
+        "Start new conversation.",
+        "User says: 'My email is bob@example.com.'",
+        "User says: 'Please close my ticket.'"
+      ],
+      "expected": {
+        "agent_reply": "I don't have enough information to answer that.",
+        "ticket_file_changes": []
+      }
+    },
+    {
+      "name": "Close ticket for UNKNOWN user",
+      "steps": [
+        "Start new conversation.",
+        "User says: 'My email is random@example.com.'",
+        "User says: 'Please close my ticket.'"
+      ],
+      "expected": {
+        "agent_reply": "I don't have enough information to answer that.",
+        "ticket_file_changes": []
+      }
+    }
+  ]
+}
