@@ -14,5 +14,13 @@
   "user2@example.com": {
     "name": "user1",
     "segment": "standard"
+  },
+  "user3@example.com": {
+    "name": "user1",
+    "segment": "standard"
+  },
+  "user4@example.com": {
+    "name": "user1",
+    "segment": "standard"
   }
 }

@@ -1,0 +1,87 @@
+{
+  "tests": [
+    {
+      "name": "Ask for email before ticket actions",
+      "context": [],
+      "user": "I want to open a ticket, my order is late",
+      "expected_exact": "Please provide the email associated with your account so I can look up your tickets."
+    },
+    {
+      "name": "Unknown email: no ticket and fallback message",
+      "context": [],
+      "user": "my email is unknown@example.com and I want to open a ticket about a refund",
+      "expected_exact": "I don't have enough information to answer that."
+    },
+    {
+      "name": "Known user: create first ticket",
+      "context": [
+        { "role": "user", "content": "my email is user1@example.com and my package is late" }
+      ],
+      "user": "yes please create a ticket",
+      "expected_contains": [
+        "created a new support ticket",
+        "Ticket ID: T-",
+        "Topic:",
+        "Department:",
+        "Urgency:",
+        "Emotion:"
+      ]
+    },
+    {
+      "name": "Ticket status without email prompts for email",
+      "context": [],
+      "user": "what is the status of my ticket?",
+      "expected_exact": "Please provide the email associated with your account so I can look up your tickets."
+    },
+    {
+      "name": "Known user with open tickets: do not create new ticket",
+      "context": [
+        { "role": "user", "content": "my email is user2@example.com" },
+        { "role": "assistant", "content": "You currently have open tickets. How can I help you with your existing ticket?" }
+      ],
+      "user": "I want to know what’s happening with my last ticket",
+      "expected_contains": [
+        "You currently have at least one open ticket",
+        "hasn’t been resolved yet",
+        "add a note"
+      ]
+    },
+    {
+      "name": "Close ticket when user says the issue is solved",
+      "context": [
+        { "role": "user", "content": "my email is user3@example.com" },
+        { "role": "assistant", "content": "How can I help you with your open ticket?" }
+      ],
+      "user": "the problem is solved, please close my ticket",
+      "expected_contains": [
+        "marked your most recent open ticket as resolved",
+        "open a new ticket"
+      ]
+    },
+    {
+      "name": "Off-topic question handled with strict message",
+      "context": [],
+      "user": "what’s your favorite movie?",
+      "expected_exact": "I'm a customer service agent and can only help with questions related to our products and services."
+    },
+    {
+      "name": "Ticket creation fails for unknown user",
+      "context": [],
+      "user": "my email is ghost@example.com and there’s a billing error on my account",
+      "expected_exact": "I don't have enough information to answer that."
+    },
+    {
+      "name": "Escalation request for existing ticket",
+      "context": [
+        { "role": "user", "content": "my email is user4@example.com" },
+        { "role": "assistant", "content": "How can I help you with your open ticket?" }
+      ],
+      "user": "I want to speak to someone now about this ticket",
+      "expected_contains": [
+        "escalated your ticket",
+        "reach out to you",
+        "as soon as possible"
+      ]
+    }
+  ]
+}
