@@ -2,3 +2,6 @@ py -3.11 -m venv .venv311
 pip install -r requirements.txt
 python -m app.rag
 streamlit run app/streamlit_app.py
+
+python -m app.followup_worker: 
+python -m app.followup_scheduler:
